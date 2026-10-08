@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>離室四步曲互動模擬遊戲</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Arial,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+    background:linear-gradient(#fff8ec,#efe6db);
+    color:#3d2a1d;
+    text-align:center;
+  }
+  .wrap{max-width:1050px;margin:auto;padding:24px 16px 42px}
+  h1{font-size:42px;margin:8px 0 4px}
+  .sub{font-size:20px;margin-bottom:18px}
+  .panel{
+    background:#fff;border-radius:26px;padding:22px;
+    box-shadow:0 10px 28px rgba(0,0,0,.12);
+  }
+  .instruction{font-size:24px;font-weight:800;margin:4px 0 18px}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .card{
+    border:none;border-radius:22px;padding:24px 14px;background:#fff;
+    box-shadow:0 5px 15px rgba(0,0,0,.14);
+    font-size:28px;font-weight:800;cursor:pointer;min-height:165px;
+    transition:.15s transform,.15s opacity,.15s background;
+  }
+  .card:hover{transform:scale(1.02)}
+  .card.done{opacity:.38;background:#eef8ea}
+  .icon{font-size:58px;display:block;margin-bottom:8px}
+  .en{display:block;font-size:17px;font-weight:600;margin-top:5px}
+  #message{min-height:44px;margin:18px 0 6px;font-size:27px;font-weight:800}
+  .progress{font-size:20px;margin-top:8px}
+  .reset{
+    margin-top:16px;border:none;border-radius:14px;padding:12px 22px;
+    background:#e9782d;color:#fff;font-size:20px;font-weight:800;cursor:pointer;
+  }
+
+  /* modal */
+  .modal{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);
+    align-items:center;justify-content:center;padding:18px;z-index:20;
+  }
+  .modal.show{display:flex}
+  .sim{
+    width:min(760px,96vw);background:#fff;border-radius:26px;padding:20px;
+    box-shadow:0 16px 45px rgba(0,0,0,.28);
+  }
+  .sim h2{font-size:30px;margin:4px 0 6px}
+  .sim p{font-size:20px;margin:6px 0 14px}
+  .scene{
+    min-height:390px;border-radius:22px;position:relative;overflow:hidden;
+    background:linear-gradient(#f8efe0 0 64%,#d7b893 64% 100%);
+    border:4px solid #ead7bf;
+  }
+  .window{
+    position:absolute;right:35px;top:34px;width:170px;height:130px;
+    border:10px solid #c79f7c;background:#ccecff;
+  }
+  .desk{
+    position:absolute;left:35px;bottom:52px;width:260px;height:24px;
+    background:#a96e43;border-radius:5px;
+  }
+  .desk:after{
+    content:"";position:absolute;left:18px;top:20px;width:18px;height:90px;background:#8f5b39;
+    box-shadow:205px 0 #8f5b39;
+  }
+  .lamp{
+    position:absolute;left:90px;bottom:78px;width:85px;height:120px;
+    cursor:pointer;
+  }
+  .shade{
+    width:82px;height:48px;background:#ffd36b;clip-path:polygon(20% 0,80% 0,100% 100%,0 100%);
+  }
+  .stand{width:10px;height:54px;background:#555;margin:auto}
+  .base{width:50px;height:10px;background:#555;margin:auto;border-radius:8px}
+  .glow{
+    position:absolute;left:-35px;top:-45px;width:150px;height:150px;border-radius:50%;
+    background:rgba(255,230,120,.55);filter:blur(8px);z-index:-1;
+  }
+  .lamp.off .shade{background:#bbb}
+  .lamp.off .glow{display:none}
+
+  .fan{
+    position:absolute;left:310px;top:75px;width:160px;height:160px;cursor:pointer;
+  }
+  .fan .hub{position:absolute;left:65px;top:65px;width:30px;height:30px;border-radius:50%;background:#555;z-index:3}
+  .blade{
+    position:absolute;left:68px;top:8px;width:24px;height:68px;border-radius:70% 30% 70% 30%;
+    background:#7da7b5;transform-origin:12px 72px;
+  }
+  .b2{transform:rotate(90deg)} .b3{transform:rotate(180deg)} .b4{transform:rotate(270deg)}
+  .fan.on{animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .ac{
+    position:absolute;right:35px;top:48px;width:215px;height:88px;border:4px solid #9db6bf;
+    border-radius:18px;background:#eef8fb;
+  }
+  .ac:after{
+    content:"";position:absolute;left:20px;right:20px;bottom:14px;height:9px;background:#6f8d98;border-radius:5px;
+  }
+  .ac .status{
+    position:absolute;right:15px;top:10px;font-weight:800;color:#2a83b8;
+  }
+  .snow{position:absolute;right:100px;top:150px;font-size:54px}
+  .remote{
+    position:absolute;right:62px;bottom:55px;width:95px;height:165px;border-radius:18px;
+    background:#e6e6e6;border:4px solid #777;padding-top:18px;cursor:pointer;
+  }
+  .screen{width:58px;height:35px;background:#b8d8b5;margin:auto;border-radius:5px;padding-top:7px;font-weight:800}
+  .powerbtn{
+    width:44px;height:44px;border-radius:50%;background:#e86e54;color:#fff;
+    margin:18px auto 0;display:flex;align-items:center;justify-content:center;font-size:25px;
+  }
+
+  .door{
+    position:absolute;left:260px;bottom:20px;width:180px;height:300px;background:#b9743f;
+    border:8px solid #744726;border-bottom:none;cursor:pointer;
+  }
+  .knob{
+    position:absolute;right:22px;top:145px;width:20px;height:20px;border-radius:50%;background:#e2c05b;
+  }
+  .lockicon{
+    position:absolute;right:105px;top:60px;font-size:54px;
+  }
+  .key{
+    position:absolute;right:110px;bottom:70px;font-size:70px;cursor:pointer;
+  }
+
+  .hint{
+    position:absolute;left:18px;right:18px;bottom:12px;background:rgba(255,255,255,.9);
+    border-radius:13px;padding:10px;font-size:18px;font-weight:700;
+  }
+  .sim-actions{margin-top:14px;display:flex;justify-content:center;gap:10px}
+  .close{
+    border:none;border-radius:12px;padding:11px 18px;background:#888;color:#fff;font-size:18px;font-weight:700;cursor:pointer;
+  }
+  .success{
+    display:none;margin-top:12px;font-size:26px;font-weight:900;color:#368b4b;
+  }
+  .success.show{display:block}
+
+  @media(max-width:650px){
+    h1{font-size:32px}
+    .cards{grid-template-columns:1fr}
+    .scene{min-height:360px}
+    .fan{left:170px}
+    .door{left:105px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⚠️ 離室四步曲</h1>
+  <div class="sub">Four Steps When Leaving the Room</div>
+
+  <div class="panel">
+    <div class="instruction">按正確次序，進入情境完成任務 👇</div>
+    <div class="cards" id="cards"></div>
+    <div id="message">由第 1 步開始！</div>
+    <div class="progress" id="progress">進度：0 / 4</div>
+    <button class="reset" onclick="startGame()">重新開始</button>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sim">
+    <h2 id="simTitle"></h2>
+    <p id="simText"></p>
+    <div class="scene" id="scene"></div>
+    <div class="success" id="success">✅ 任務完成！</div>
+    <div class="sim-actions">
+      <button class="close" onclick="closeModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const steps = [
+  {n:1, zh:"熄燈", en:"Turn Off Lights", icon:"💡"},
+  {n:2, zh:"關風扇", en:"Turn Off Fan", icon:"🌀"},
+  {n:3, zh:"關冷氣", en:"Turn Off A/C", icon:"❄️"},
+  {n:4, zh:"鎖門", en:"Lock the Door", icon:"🚪"}
+];
+let expected=1, activeButton=null, activeStep=null;
+
+/* simple Web Audio sound effects */
+function beep(freq=520,dur=.14,type="sine",vol=.08){
+  const A=window.AudioContext||window.webkitAudioContext;
+  const ctx=new A(), o=ctx.createOscillator(), g=ctx.createGain();
+  o.type=type;o.frequency.value=freq;g.gain.value=vol;
+  o.connect(g);g.connect(ctx.destination);
+  o.start();
+  g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+dur);
+  o.stop(ctx.currentTime+dur);
+}
+function successSound(){
+  setTimeout(()=>beep(523,.13,"sine",.08),0);
+  setTimeout(()=>beep(659,.13,"sine",.08),130);
+  setTimeout(()=>beep(784,.20,"sine",.09),260);
+}
+function wrongSound(){beep(180,.22,"square",.05)}
+function clickSound(){beep(420,.06,"sine",.04)}
+function powerDown(){beep(300,.09,"sine",.05);setTimeout(()=>beep(180,.14,"sine",.05),80)}
+function lockSound(){beep(650,.05,"square",.04);setTimeout(()=>beep(420,.08,"square",.04),60)}
+
+function shuffle(a){return a.map(v=>({v,r:Math.random()})).sort((x,y)=>x.r-y.r).map(x=>x.v)}
+
+function startGame(){
+  expected=1;
+  const area=document.getElementById("cards"); area.innerHTML="";
+  shuffle([...steps]).forEach(s=>{
+    const b=document.createElement("button");
+    b.className="card";
+    b.innerHTML=`<span class="icon">${s.icon}</span>${s.zh}<span class="en">${s.en}</span>`;
+    b.onclick=()=>openStep(b,s);
+    area.appendChild(b);
+  });
+  document.getElementById("message").textContent="由第 1 步開始！";
+  document.getElementById("progress").textContent="進度：0 / 4";
+}
+
+function openStep(btn,s){
+  if(btn.classList.contains("done")) return;
+  if(s.n!==expected){
+    wrongSound();
+    document.getElementById("message").textContent=`❌ 次序未啱！而家應該做第 ${expected} 步。`;
+    btn.animate([{transform:"translateX(0)"},{transform:"translateX(-8px)"},{transform:"translateX(8px)"},{transform:"translateX(0)"}],{duration:280});
+    return;
+  }
+  activeButton=btn; activeStep=s;
+  document.getElementById("success").classList.remove("show");
+  document.getElementById("simTitle").textContent=`第 ${s.n} 步：${s.zh}`;
+  const texts={
+    1:"情境：你準備離開課室。請在畫面中把燈關掉。",
+    2:"情境：風扇仍然開著。請把風扇關掉。",
+    3:"情境：冷氣仍然運作。請使用遙控器關掉冷氣。",
+    4:"情境：所有電器已關閉。最後請把門鎖好。"
+  };
+  document.getElementById("simText").textContent=texts[s.n];
+  renderScene(s.n);
+  document.getElementById("modal").classList.add("show");
+}
+
+function renderScene(n){
+  const sc=document.getElementById("scene");
+  if(n===1){
+    sc.innerHTML=`
+      <div class="window"></div><div class="desk"></div>
+      <div class="lamp" id="lamp"><div class="glow"></div><div class="shade"></div><div class="stand"></div><div class="base"></div></div>
+      <div class="hint">👆 請按一下檯燈，模擬熄燈。</div>`;
+    document.getElementById("lamp").onclick=()=>{
+      clickSound();
+      const l=document.getElementById("lamp");
+      if(l.classList.contains("off")) return;
+      l.classList.add("off"); powerDown(); completeStep();
+    };
+  }
+  if(n===2){
+    sc.innerHTML=`
+      <div class="window"></div>
+      <div class="fan on" id="fan"><div class="hub"></div><div class="blade"></div><div class="blade b2"></div><div class="blade b3"></div><div class="blade b4"></div></div>
+      <div class="hint">👆 請按一下轉動中的風扇，把它關掉。</div>`;
+    document.getElementById("fan").onclick=()=>{
+      clickSound();
+      const f=document.getElementById("fan");
+      if(!f.classList.contains("on")) return;
+      f.classList.remove("on"); powerDown(); completeStep();
+    };
+  }
+  if(n===3){
+    sc.innerHTML=`
+      <div class="window"></div>
+      <div class="ac" id="ac"><div class="status" id="acstatus">ON</div></div>
+      <div class="snow" id="snow">❄️</div>
+      <div class="remote" id="remote"><div class="screen" id="screen">24°C</div><div class="powerbtn">⏻</div></div>
+      <div class="hint">👆 請按遙控器上的紅色電源鍵，關掉冷氣。</div>`;
+    document.getElementById("remote").onclick=()=>{
+      clickSound();
+      if(document.getElementById("acstatus").textContent==="OFF") return;
+      document.getElementById("acstatus").textContent="OFF";
+      document.getElementById("screen").textContent="OFF";
+      document.getElementById("snow").style.display="none";
+      powerDown(); completeStep();
+    };
+  }
+  if(n===4){
+    sc.innerHTML=`
+      <div class="door"><div class="knob"></div></div>
+      <div class="lockicon" id="lockicon">🔓</div>
+      <div class="key" id="key">🔑</div>
+      <div class="hint">👆 請按一下鎖匙，模擬鎖門。</div>`;
+    document.getElementById("key").onclick=()=>{
+      clickSound();
+      if(document.getElementById("lockicon").textContent==="🔒") return;
+      document.getElementById("lockicon").textContent="🔒";
+      lockSound(); completeStep();
+    };
+  }
+}
+
+function completeStep(){
+  successSound();
+  document.getElementById("success").classList.add("show");
+  activeButton.classList.add("done");
+  const justDone=expected;
+  expected++;
+  document.getElementById("progress").textContent=`進度：${Math.min(expected-1,4)} / 4`;
+  document.getElementById("message").textContent=
+    justDone<4 ? `✅ 第 ${justDone} 步完成！下一步係第 ${justDone+1} 步。`
+               : "🌟 全部完成！離室前記得關電源及鎖門！";
+  setTimeout(()=>closeModal(),1100);
+}
+
+function closeModal(){
+  document.getElementById("modal").classList.remove("show");
+}
+startGame();
+</script>
+</body>
+</html>
